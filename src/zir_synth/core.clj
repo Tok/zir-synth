@@ -8,6 +8,7 @@
   (:require [clojure.core.async :refer [<!! timeout]]
             [clojure.tools.logging :as log]
             [zir-synth.instrument.buzz :as buzz]
+            [zir-synth.util.math :as math-util]
             [zir-synth.midi.note :as note]
             [zir-synth.midi.chord :as chord]
             [zir-synth.midi.melody :as melody]
@@ -49,10 +50,10 @@
           on-msg (ShortMessage. (ShortMessage/NOTE_ON) chan midi-note volume)
           off-msg (ShortMessage. (ShortMessage/NOTE_OFF) chan midi-note volume)]
       (.add track (MidiEvent. on-msg i))
-      (.add track (MidiEvent. off-msg (+ i 1)))
+      (.add track (MidiEvent. off-msg (+ i 4)))
       )))
 
-(defn- play-sequence [sq]
+(defn- play-sequence [sq bpm]
   (let [sequencer (MidiSystem/getSequencer)
         indexed-notes (map-indexed (fn [i n] [i (note/midi-notes note/default-octave n)]) sq)
         midi-seq (Sequence. (Sequence/PPQ) 4)
@@ -60,23 +61,26 @@
         chan 1]
     (log/info "Playing sequence:" sq)
     (.open sequencer)
-    (doseq [[i n] indexed-notes] (queue-notes track chan i n))
+    (.setTempoInBPM sequencer bpm)
+    (doseq [[i n] indexed-notes] (queue-notes track chan (* i 4) n))
     (.setSequence sequencer midi-seq)
     ;(.setLoopCount sequencer Sequencer/LOOP_CONTINUOUSLY)
     (.start sequencer)
     ))
 
 (defn -main "Zir Synth" [& args]
-  (let [scale (major/c-major)]
-    ;(play-sequence (melody/basic-melody (melody/random-segment scale)))
-    (play-sequence (melody/triad-melody scale))
-    )
-  ;(file/play-midi-resource "wikipedia/Drum_sample.mid")
-  ;(play-times! 16)
-  (future
-    (<!! (timeout 4000))
-    (.close (MidiSystem/getSequencer))
-    (shutdown-agents)
-    (log/info "Shutting down...")
-    (System/exit 0)
-    ))
+  (let [scale (major/c-major)
+        melody (melody/triad-melody scale)
+        bpm 180.0
+        steps (count melody)
+        duration-s (* (math-util/to-bps bpm) steps)]
+    (play-sequence melody bpm)
+    ;(file/play-midi-resource "wikipedia/Drum_sample.mid")
+    ;(play-times! 16)
+    (future
+      (<!! (timeout (* duration-s 1000)))
+      (.close (MidiSystem/getSequencer))
+      (shutdown-agents)
+      (log/info "Shutting down...")
+      (System/exit 0)
+      )))

@@ -14,3 +14,5 @@
 
 (defn next-pitch [frequency] (* frequency twelfth-root-of-two))
 (defn previous-pitch [frequency] (/ frequency twelfth-root-of-two))
+
+(defn to-bps [bpm] (/ bpm 60.0))
