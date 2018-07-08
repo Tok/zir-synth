@@ -23,10 +23,15 @@
                    :A#/Bb 10 :A# 10 :a# 10 :Bb 10 :bb 10
                    :B     11 :b 11 :A## 11 :Cb 11})
 
+(defn note-up [name] (get (names) (mod (+ (get (offsets) name) 1) 12)))
+(defn note-down [name] (get (names) (mod (- (get (offsets) name) 1) 12)))
+
 (defn normalize [note] (get names (get offsets note)))
 
 (defn note-name [note] (let [remainder (mod note 12)] (get (names) remainder)))
 (defn offset [note-name] (get (offsets) note-name))
+
+(def default-octave 0)
 
 (defn midi-note [octave note]
   (let [oct (int (* (+ octave 5) 12))

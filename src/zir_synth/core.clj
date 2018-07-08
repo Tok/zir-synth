@@ -10,6 +10,7 @@
             [zir-synth.instrument.buzz :as buzz]
             [zir-synth.midi.note :as note]
             [zir-synth.midi.chord :as chord]
+            [zir-synth.midi.melody :as melody]
             [zir-synth.midi.scale.major :as major]
             [zir-synth.midi.scale.minor :as minor]))
 
@@ -42,34 +43,30 @@
         (play-note! chan piano-midi piano-volume duration-ms)
         ))))
 
-(defn- queue-note [track chan i note]
+(defn- queue-note [track chan i midi-note]
   (let [volume 100
-        octave 0
-        midi-note (note/midi-note octave note)
         on-msg (ShortMessage. (ShortMessage/NOTE_ON) chan midi-note volume)
         off-msg (ShortMessage. (ShortMessage/NOTE_OFF) chan midi-note volume)]
     (.add track (MidiEvent. on-msg i))
     (.add track (MidiEvent. off-msg (+ i 1)))
     ))
 
-(defn- random-sequence [scale size]
-  (map (fn [i] [i (rand-nth scale)]) (range size)))
-
-(defn- play-sequence [sequence]
+(defn- play-sequence [sq]
   (let [sequencer (MidiSystem/getSequencer)
+        indexed-notes (map-indexed (fn [i n] [i (note/midi-note note/default-octave n)]) sq)
         midi-seq (Sequence. (Sequence/PPQ) 4)
         track (.createTrack midi-seq)
         chan 1]
-    (log/info "Playing sequence:" sequence)
+    (log/info "Playing sequence:" sq)
     (.open sequencer)
-    (doseq [note sequence] (queue-note track chan (first note) (second note)))
+    (doseq [note indexed-notes] (queue-note track chan (first note) (second note)))
     (.setSequence sequencer midi-seq)
     ;(.setLoopCount sequencer Sequencer/LOOP_CONTINUOUSLY)
     (.start sequencer)
     ))
 
 (defn -main "Zir Synth" [& args]
-  (play-sequence (random-sequence (major/c-major) 8))
+  (play-sequence (melody/basic-melody (melody/random-segment (major/c-major))))
   ;(file/play-midi-resource "wikipedia/Drum_sample.mid")
   ;(play-times! 16)
   (future
