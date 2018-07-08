@@ -38,6 +38,8 @@
         offset (offset note)]
     (+ oct offset)))
 
+(defn midi-notes [octave notes] (map (fn [n] (midi-note octave n)) notes))
+
 (defn midi-progression [start-octave notes]
   (let [key-note (first notes)
         key-note-midi (midi-note start-octave key-note)
