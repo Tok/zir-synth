@@ -6,5 +6,6 @@
                  [org.clojure/algo.generic "0.1.2"]
                  [org.clojure/tools.logging "0.4.0"]]
   :main ^:skip-aot zir-synth.core
+  :aot zir-synth.listener
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})
