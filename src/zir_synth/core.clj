@@ -22,7 +22,8 @@
     (.noteOff ^SoftChannelProxy chan note-number)
     ))
 
-(defn- play-times! [n]
+(defn- play-seq! [midi-seq]
+  (log/info "Playing sequence:" midi-seq)
   (let [synth (MidiSystem/getSynthesizer)
         chan (nth (.getChannels synth) 0)
         piano-volume 128/2
@@ -30,41 +31,77 @@
         bpm (* 120)
         steps (* bpm 4)
         duration-ms (/ 60000 steps)
-        scale (minor/scale :B)
-        triad (chord/random-triad scale)
-        octave 0
-        add-harmony? true]
+        octave 0]
     (.open synth)
-    (dotimes [i n]
-      (let [piano-note (rand-nth triad)
-            buzz-note (rand-nth scale)
-            piano-midi (note/midi-note octave piano-note)
-            buzz-hz (note/frequency (note/midi-note octave buzz-note))]
-        (buzz/play! buzz-hz buzz-volume duration-ms add-harmony?)
-        (play-note! chan piano-midi piano-volume duration-ms)
-        ))))
+    (doseq [notes midi-seq]
+      (println notes)
+      (doseq [n notes]
+        (play-note! chan (note/midi-note octave n) piano-volume duration-ms)
+        )
+      (buzz/play! notes buzz-volume duration-ms)
+      )))
 
-(defn- queue-notes [track chan i midi-note-vec]
+(defn- send-notes [receiver chan-id i midi-note-vec]
   (doseq [midi-note midi-note-vec]
     (let [volume 100
-          on-msg (ShortMessage. (ShortMessage/NOTE_ON) chan midi-note volume)
-          off-msg (ShortMessage. (ShortMessage/NOTE_OFF) chan midi-note volume)]
+          on-msg (ShortMessage. (ShortMessage/NOTE_ON) chan-id midi-note volume)
+          off-msg (ShortMessage. (ShortMessage/NOTE_OFF) chan-id midi-note volume)
+          ]
+        (.send receiver on-msg i)
+        (.send receiver off-msg (+ i 4))
+      )))
+
+(defn- queue-notes [track chan-id i midi-note-vec]
+  (doseq [midi-note midi-note-vec]
+    (let [volume 100
+          on-msg (ShortMessage. (ShortMessage/NOTE_ON) chan-id midi-note volume)
+          off-msg (ShortMessage. (ShortMessage/NOTE_OFF) chan-id midi-note volume)]
+      ;(synth-chan)
       (.add track (MidiEvent. on-msg i))
       (.add track (MidiEvent. off-msg (+ i 4)))
       )))
 
+(defn- init [sequencer synth]
+  (let [transmitter (.getTransmitter sequencer)
+        receiver (.getReceiver synth)
+        soundbank (.getDefaultSoundbank synth)]
+    (log/info "Loading soundbank..")
+    (.loadAllInstruments synth soundbank)
+    (log/info "Connecting synth..")
+    (.setReceiver transmitter receiver)
+    receiver
+    ))
+
 (defn- play-sequence [sq bpm]
   (let [sequencer (MidiSystem/getSequencer)
+        synth (MidiSystem/getSynthesizer)
+        receiver (init sequencer synth)
         indexed-notes (map-indexed (fn [i n] [i (note/midi-notes note/default-octave n)]) sq)
         midi-seq (Sequence. (Sequence/PPQ) 4)
         track (.createTrack midi-seq)
-        chan 1]
-    (log/info "Playing sequence:" sq)
+        synth-chan-id 0]
+    (log/info "Opening Synthesizer..")
+    (.open synth)
+    (log/info "Obtaining channels..")
+    (def synth-chan (nth (.getChannels synth) synth-chan-id))
+    (log/info "Preparing track..")
+    (.add track (MidiEvent.
+                  (ShortMessage.
+                    (ShortMessage/PROGRAM_CHANGE) synth-chan-id 1 0) -1))
+    (log/info "Opening Sequencer..")
     (.open sequencer)
+    (log/info "Setting tempo to" bpm "BPM.")
     (.setTempoInBPM sequencer bpm)
-    (doseq [[i n] indexed-notes] (queue-notes track chan (* i 4) n))
+    (log/info "Queueing notes..")
+
+    ;(doseq [[i n] indexed-notes] (send-notes receiver synth-chan-id (* i 4) n))
+    (doseq [[i n] indexed-notes] (queue-notes track synth-chan-id (* i 4) n))
+
+    (log/info "Setting sequence:" sq)
     (.setSequence sequencer midi-seq)
     ;(.setLoopCount sequencer Sequencer/LOOP_CONTINUOUSLY)
+    (.setLoopCount sequencer 1)
+    (log/info "Starting..")
     (.start sequencer)
     ))
 
@@ -75,12 +112,16 @@
         steps (count melody)
         duration-s (* (math-util/to-bps bpm) steps)]
     (play-sequence melody bpm)
+
+    ;(play-seq! melody)
+
     ;(file/play-midi-resource "wikipedia/Drum_sample.mid")
     ;(play-times! 16)
     (future
       (<!! (timeout (* duration-s 1000)))
-      (.close (MidiSystem/getSequencer))
       (shutdown-agents)
+      ;(.stop sequencer)
+      ;(.close sequencer)
       (log/info "Shutting down...")
       (System/exit 0)
       )))
