@@ -7,9 +7,12 @@
            (javax.sound.midi Receiver)
            (javax.sound.midi Sequencer)
            (javax.sound.midi Synthesizer)
+           (javax.sound.sampled AudioFormat)
+           (javax.sound.sampled AudioSystem)
+           (javax.sound.sampled SourceDataLine)
            ))
 
-(defn receiver []
+(defn zir-receiver []
   (reify Receiver
     (send [this message timestamp]
       (println "sending..." message timestamp)              ;TODO
@@ -29,10 +32,14 @@
         devices (map (fn [info] (MidiSystem/getMidiDevice info)) infos)
         midi-ports (filter midi-port? devices)
         in-port (first (filter in-port? midi-ports))
-        transmitter (.getTransmitter ^MidiDevice in-port)]
-    (.setReceiver transmitter (receiver))
+        synth-transmitter (.getTransmitter ^MidiDevice in-port)
+        zir-transmitter (.getTransmitter ^MidiDevice in-port)
+        synth (MidiSystem/getSynthesizer)]
+    (.setReceiver synth-transmitter (.getReceiver synth))
+    (.setReceiver zir-transmitter (zir-receiver))
     (println "Trying to open device" (.toString (.getDeviceInfo in-port)))
     (try
+      (.open synth)
       (.open in-port)
       (println "Listening..")
       (catch MidiUnavailableException e (str "Device not available" (.getMessage e)))
