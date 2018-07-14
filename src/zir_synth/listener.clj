@@ -17,27 +17,32 @@
            (javax.sound.sampled SourceDataLine)
            ))
 
-(defn write! [sdl sound-byte angle volume]
-  (let [harmonized (byte (* (Math/sin (* angle 2)) (/ volume zir-math/phi)))]
-    (.write ^SourceDataLine sdl (byte-array (concat [sound-byte] [harmonized])) 0 2)))
+(defn sine-wave [t frequency-Hz velocity]
+  (let [volume 0.05
+        amplitude (* volume velocity)
+        ticks-per-cycle (/ zir-synth/sample-rate-Hz frequency-Hz)
+        cycles (/ t ticks-per-cycle)
+        angle (* zir-math/tau cycles)]
+    (byte (* amplitude (Math/sin angle)))))
 
 (defn audio-format []
   (let [sample-size-in-bits 8 channels 2 signed true big-endian false]
     (AudioFormat. zir-synth/sample-rate-Hz sample-size-in-bits channels signed big-endian)))
 
 (defn play-note [velocities sdl note]
-  (let [velocity @(get velocities note)
-        running? (> velocity 0)]
-    (if running?
-      (let [frequency-Hz (note/frequency note)
-            angle (zir-synth/calc-angle zir-synth/sample-rate-Hz frequency-Hz zir-synth/sample-rate-Hz)
-            data-byte (zir-synth/sound-byte angle velocity)]
-        (write! sdl data-byte angle velocity)
-        (recur velocities sdl note))
-      (do
-        (.drain sdl)
-        (.stop sdl)
-        (.close sdl)))))
+  (loop [t 0]
+    (let [velocity @(get velocities note)
+          running? (> velocity 0)]
+      (if running?
+        (let [frequency-Hz (note/frequency note)
+              data (sine-wave t frequency-Hz velocity)
+              bytes (byte-array (concat [data] [data]))]
+          (.write ^SourceDataLine sdl bytes 0 2)
+          (recur (+ t 1)))
+        (do
+          (.drain sdl)
+          (.stop sdl)
+          (.close sdl))))))
 
 (defn note-off [velocities timestamp note]
   (println timestamp "OFF" note)

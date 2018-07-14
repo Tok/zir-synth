@@ -3,6 +3,7 @@
   (:require [clojure.algo.generic.math-functions :as algo]))
 
 (def phi 1.618033988749895)
+(def tau (* Math/PI 2))
 
 (defn interval-coefficient [offset] (algo/pow 2 (/ offset 12)))
 
