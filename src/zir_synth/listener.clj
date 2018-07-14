@@ -18,7 +18,7 @@
            ))
 
 (defn sine-wave [t frequency-Hz velocity]
-  (let [volume 0.05
+  (let [volume 0.2
         amplitude (* volume velocity)
         ticks-per-cycle (/ zir-synth/sample-rate-Hz frequency-Hz)
         cycles (/ t ticks-per-cycle)
@@ -82,7 +82,7 @@
   "Opens the first active MIDI input device and connects it with a new receiver."
   [& args]
   (let [infos (MidiSystem/getMidiDeviceInfo)
-        devices (map (fn [info] (MidiSystem/getMidiDevice info)) infos)
+        devices (map #(MidiSystem/getMidiDevice %) infos)
         midi-ports (filter midi-port? devices)
         in-port (first (filter in-port? midi-ports))
         synth-transmitter (.getTransmitter ^MidiDevice in-port)

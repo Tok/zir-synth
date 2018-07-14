@@ -9,7 +9,7 @@
 (defn- last-note-up [segment] (switch-last segment (note/note-up (last segment))))
 (defn- last-note-down [segment] (switch-last segment (note/note-down (last segment))))
 
-(defn random-segment [scale] (vec (map (fn [i] (rand-nth scale)) (range 4))))
+(defn random-segment [scale] (vec (map (fn [_] (rand-nth scale)) (range 4))))
 
 (defn- map-vec [n] (if (vector? n) n [n]))
 
