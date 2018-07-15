@@ -4,7 +4,9 @@
             [clojure.core.async :refer [go]]
             [zir-synth.synth.oscillator :as osc]
             [zir-synth.util.synth :as zir-synth]
-            [zir-synth.midi.note :as note])
+            [zir-synth.util.math :as zir-math]
+            [zir-synth.midi.note :as note]
+            [clojure.tools.logging :as log])
   (:import (javax.sound.midi MidiDevice)
            (javax.sound.midi MidiSystem)
            (javax.sound.midi MidiUnavailableException)
@@ -17,23 +19,38 @@
            ))
 
 (defn zir-receiver []
-  (let [velocities (into (sorted-map) (map (fn [i] [i (atom (int 0))]) (range 0 127)))
-        audio-format (zir-synth/audio-format)
-        sdl (AudioSystem/getSourceDataLine audio-format)]
-    (defn- synth-loop [t]
+  (let [start-time (.getTime (java.util.Date.))
+        velocities (into (sorted-map) (map (fn [i] [i (atom (int 0))]) (range 0 127)))]
+    (defn- synth-loop [sdl i]
       (let [active (filter (fn [[k v]] (> @v 0)) velocities)
-            wave-form :sine
-            waves (map (fn [pair] (osc/calculate wave-form t (key pair))) active)
-            wave (reduce + waves)
-            wave-bytes (osc/wave-bytes wave 64.0)]
-        (.write ^SourceDataLine sdl wave-bytes 0 2)
-        )
-      (recur (+ t 1)))
+            active? (> (count active) 0)]
+        (if active?
+          (let [cnt (count active)
+                wave-form :sine
+                t-ms (- (.getTime (java.util.Date.)) start-time)
+                angles (map (fn [[note velo]] [(osc/angle t-ms note) @velo]) active)
+                raw-angle (reduce (fn [m [angle velo]] [(+ (first m) angle) (+ (second m) velo)]) [0 0] angles)
+                angle [(mod (first raw-angle) zir-math/tau) (/ (second raw-angle) cnt)]
+                wave (osc/calculate-wave wave-form (first angle))
+                volume (second angle)
+                wave-bytes (osc/wave-bytes wave volume)]
+            (log/debug i "count" cnt "angle" (first angle) "wave" wave "volume" volume)
+            (if (false? (.isActive sdl))
+              (.start sdl))
+            (.write ^SourceDataLine sdl wave-bytes 0 2)
+            )
+          (do (.drain sdl) (.stop sdl))
+          )
+        (recur sdl (+ i 1))
+        ))
     (defn start-up []
-      (println "Starting receiver...")
-      (.open sdl audio-format)
-      (.start sdl)
-      (go (synth-loop 0)))
+      (let [audio-format (zir-synth/audio-format)
+            sdl (AudioSystem/getSourceDataLine audio-format)]
+        (println "Starting receiver...")
+        (.open sdl audio-format)
+        (go
+          (synth-loop sdl 0)
+          (.close sdl))))
     (defn note-off [timestamp note]
       (println timestamp "OFF" note (note/note-name note))
       (reset! (get velocities note) 0))
@@ -53,11 +70,7 @@
                 (= command ShortMessage/NOTE_ON) (note-on timestamp note velocity)
                 (= command ShortMessage/NOTE_OFF) (note-off timestamp note)))
             (println "WARNING: Unhandled command" command))))
-      (close [this]
-        (println "Closing...")
-        (.drain sdl)
-        (.stop sdl)
-        (.close sdl)))))
+      (close [this] (println "Closing...")))))
 
 (defn- midi-port? [device] (and (not (instance? Sequencer device)) (not (instance? Synthesizer device))))
 (defn- in-port? [midi-port] (s/includes? (type (.getDeviceInfo midi-port)) "MidiInDevice"))
