@@ -16,27 +16,18 @@
            (javax.sound.sampled SourceDataLine)
            ))
 
-(defn note-off [velocities timestamp note]
-  (println timestamp "OFF" note (note/note-name note))
-  (reset! (get velocities note) 0))
-
-(defn note-on [velocities timestamp note velocity]
-  (println timestamp "ON" note velocity (note/note-name note))
-  (if (= velocity 0)
-    (note-off velocities timestamp note)
-    (reset! (get velocities note) velocity)))
-
 (defn zir-receiver []
   (let [audio-format (zir-synth/audio-format)
         sdl (AudioSystem/getSourceDataLine audio-format)
         velocities (into (sorted-map) (map (fn [i] [i (atom (int 0))]) (range 0 127)))]
+    (defn- calc-data [t note velocity]
+      (let [frequency-Hz (note/frequency note)
+            volume (* velocity 0.2)]                        ;TODO
+        (osc/wave-bytes (osc/square t frequency-Hz) volume))
+      )
     (defn- synth-loop [t]
       (doseq [active (filter (fn [[k v]] (> @v 0)) velocities)]
-        (let [note (key active)
-              velocity @(val active)
-              frequency-Hz (note/frequency note)
-              volume (* velocity 0.2)
-              data (osc/wave-bytes (osc/square t frequency-Hz) volume)
+        (let [data (calc-data t (key active) @(val active))
               bytes (byte-array (concat [data] [data]))]
           (.write ^SourceDataLine sdl bytes 0 2)))
       (recur (+ t 1)))
@@ -45,6 +36,14 @@
       (.open sdl audio-format)
       (.start sdl)
       (go (synth-loop 0)))
+    (defn note-off [timestamp note]
+      (println timestamp "OFF" note (note/note-name note))
+      (reset! (get velocities note) 0))
+    (defn note-on [timestamp note velocity]
+      (println timestamp "ON" note velocity (note/note-name note))
+      (if (= velocity 0)
+        (note-off timestamp note)
+        (reset! (get velocities note) velocity)))
     (reify Receiver
       (send [_ message timestamp]
         (let [command (int (.getCommand message))
@@ -53,8 +52,8 @@
             (let [note (.getData1 message)
                   velocity (.getData2 message)]
               (cond
-                (= command ShortMessage/NOTE_ON) (note-on velocities timestamp note velocity)
-                (= command ShortMessage/NOTE_OFF) (note-off velocities timestamp note)))
+                (= command ShortMessage/NOTE_ON) (note-on timestamp note velocity)
+                (= command ShortMessage/NOTE_OFF) (note-off timestamp note)))
             (println "WARNING: Unhandled command" command))))
       (close [this]
         (println "Closing...")
