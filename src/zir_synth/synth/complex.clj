@@ -6,13 +6,16 @@
 (defn zero [] [0.0 0.0])
 (defn one [] [1.0 0.0])
 
-(defn from-magnitude-and-phase [mag phase]
-  [(* mag (Math/cos phase)) (* mag (Math/sin phase))])
+(defn from-real [re] [re 0.0])
+(defn from-imaginary [im] [0.0 im])
+(defn from-magnitude-and-phase [mag pha]
+  [(* mag (Math/cos pha)) (* mag (Math/sin pha))])
 
 (defn- add-squares [[re im]] (+ (* re re) (* im im)))
-
 (defn magnitude [[re im]] (Math/sqrt (add-squares [re im])))
 (defn phase [[re im]] (algo/atan2 re im))
+
+(defn select-stronger [a b] (if (> (magnitude a) (magnitude b)) a b))
 
 (defn negate [[re im]] [(- re) (- im)])
 (defn conjugate [[re im]] [re (- im)])
