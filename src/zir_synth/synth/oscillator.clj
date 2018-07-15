@@ -5,15 +5,16 @@
     [zir-synth.util.math :as zir-math]
     ))
 
-(defn sine [t frequency-Hz amplitude]
+(defn- angle [t frequency-Hz]
   (let [ticks-per-cycle (/ zir-synth/sample-rate-Hz frequency-Hz)
-        cycles (/ t ticks-per-cycle)
-        angle (* zir-math/tau cycles)]
-    (byte (* amplitude (Math/sin angle)))))
+        cycles (/ t ticks-per-cycle)]
+    (* cycles zir-math/tau)))
 
-(defn square [t frequency-Hz amplitude]
-  (let [ticks-per-cycle (/ zir-synth/sample-rate-Hz frequency-Hz)
-        cycles (/ t ticks-per-cycle)
-        angle (* zir-math/tau cycles)
-        positive? (> 0 (Math/sin angle))]
-    (byte (* amplitude (if positive? 1.0 0.0)))))
+(defn sine [t frequency-Hz]
+  (Math/sin (angle t frequency-Hz)))
+
+(defn square [t frequency-Hz]
+  (if (> 0 (Math/sin (angle t frequency-Hz))) 1.0 0.0))
+
+(defn wave-bytes [wave amplitude]
+  (byte (* wave amplitude)))

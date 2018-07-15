@@ -28,7 +28,7 @@
       (if running?
         (let [frequency-Hz (note/frequency note)
               volume (* velocity 0.2)
-              data (osc/square t frequency-Hz volume)
+              data (osc/wave-bytes (osc/square t frequency-Hz) volume)
               bytes (byte-array (concat [data] [data]))]
           (.write ^SourceDataLine sdl bytes 0 2)
           (recur (+ t 1)))
