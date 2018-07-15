@@ -2,8 +2,8 @@
   (:gen-class)
   (:require [clojure.string :as s]
             [clojure.core.async :refer [go]]
+            [zir-synth.synth.oscillator :as osc]
             [zir-synth.util.synth :as zir-synth]
-            [zir-synth.util.math :as zir-math]
             [zir-synth.midi.note :as note])
   (:import (javax.sound.midi MidiDevice)
            (javax.sound.midi MidiSystem)
@@ -17,14 +17,6 @@
            (javax.sound.sampled SourceDataLine)
            ))
 
-(defn sine-wave [t frequency-Hz velocity]
-  (let [volume 0.2
-        amplitude (* volume velocity)
-        ticks-per-cycle (/ zir-synth/sample-rate-Hz frequency-Hz)
-        cycles (/ t ticks-per-cycle)
-        angle (* zir-math/tau cycles)]
-    (byte (* amplitude (Math/sin angle)))))
-
 (defn audio-format []
   (let [sample-size-in-bits 8 channels 2 signed true big-endian false]
     (AudioFormat. zir-synth/sample-rate-Hz sample-size-in-bits channels signed big-endian)))
@@ -35,7 +27,8 @@
           running? (> velocity 0)]
       (if running?
         (let [frequency-Hz (note/frequency note)
-              data (sine-wave t frequency-Hz velocity)
+              volume (* velocity 0.2)
+              data (osc/square t frequency-Hz volume)
               bytes (byte-array (concat [data] [data]))]
           (.write ^SourceDataLine sdl bytes 0 2)
           (recur (+ t 1)))
@@ -45,11 +38,11 @@
           (.close sdl))))))
 
 (defn note-off [velocities timestamp note]
-  (println timestamp "OFF" note)
+  (println timestamp "OFF" note (note/note-name note))
   (reset! (get velocities note) 0))
 
 (defn note-on [velocities timestamp note velocity]
-  (println timestamp "ON" note velocity)
+  (println timestamp "ON" note velocity (note/note-name note))
   (if (= velocity 0)
     (note-off velocities timestamp note)
     (let [audio-format (audio-format)

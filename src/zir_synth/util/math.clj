@@ -5,6 +5,8 @@
 (def phi 1.618033988749895)
 (def tau (* Math/PI 2))
 
+(defn angular-velocity [frequency-Hz] (* frequency-Hz tau))
+
 (defn interval-coefficient [offset] (algo/pow 2 (/ offset 12)))
 
 ;https://en.wikipedia.org/wiki/Twelfth_root_of_two#The_equal-tempered_chromatic_scale
