@@ -7,7 +7,8 @@
             [zir-synth.util.math :as zir-math]
             [zir-synth.midi.note :as note]
             [clojure.tools.logging :as log])
-  (:import (javax.sound.midi MidiDevice)
+  (:import (java.lang System)
+           (javax.sound.midi MidiDevice)
            (javax.sound.midi MidiSystem)
            (javax.sound.midi MidiUnavailableException)
            (javax.sound.midi Receiver)
@@ -19,7 +20,7 @@
            ))
 
 (defn zir-receiver []
-  (let [start-time (.getTime (java.util.Date.))
+  (let [start-nano (System/nanoTime)
         velocities (into (sorted-map) (map (fn [i] [i (atom (int 0))]) (range 0 127)))]
     (defn- synth-loop [sdl i]
       (let [active (filter (fn [[k v]] (> @v 0)) velocities)
@@ -27,14 +28,16 @@
         (if active?
           (let [cnt (count active)
                 wave-form :sine
-                t-ms (- (.getTime (java.util.Date.)) start-time)
-                angles (map (fn [[note velo]] [(osc/angle t-ms note) @velo]) active)
+                now-nano (System/nanoTime)
+                t-nano (- now-nano start-nano)
+                tick (mod (/ t-nano zir-synth/ns-per-sample) zir-synth/ns-per-sample)
+                angles (map (fn [[note velo]] [(osc/angle tick note) @velo]) active)
                 raw-angle (reduce (fn [m [angle velo]] [(+ (first m) angle) (+ (second m) velo)]) [0 0] angles)
                 angle [(mod (first raw-angle) zir-math/tau) (/ (second raw-angle) cnt)]
                 wave (osc/calculate-wave wave-form (first angle))
                 volume (second angle)
                 wave-bytes (osc/wave-bytes wave volume)]
-            (log/debug i "count" cnt "angle" (first angle) "wave" wave "volume" volume)
+            (log/debug i "tick" (long tick) "count" cnt "angle" (first angle) "wave" wave "volume" volume)
             (if (false? (.isActive sdl))
               (.start sdl))
             (.write ^SourceDataLine sdl wave-bytes 0 2)

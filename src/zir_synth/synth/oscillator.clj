@@ -5,12 +5,11 @@
             [zir-synth.midi.note :as note]
             ))
 
-
-(defn angle [t note]
+(defn angle [tick note]
   (let [frequency-Hz (note/frequency note)
-        ticks-per-cycle (/ zir-synth/sample-rate-Hz frequency-Hz)
-        cycles (/ t ticks-per-cycle)]
-    (mod (* cycles zir-math/tau) zir-math/tau)))
+        tpc (zir-synth/ticks-per-cycle frequency-Hz)
+        cycle (/ tick tpc)]
+    (mod (* cycle zir-math/tau) zir-math/tau)))
 
 (defn calculate-wave [type angle]
   (cond
