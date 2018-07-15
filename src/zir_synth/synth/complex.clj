@@ -6,6 +6,9 @@
 (defn zero [] [0.0 0.0])
 (defn one [] [1.0 0.0])
 
+(defn from-magnitude-and-phase [mag phase]
+  [(* mag (Math/cos phase)) (* mag (Math/sin phase))])
+
 (defn- add-squares [[re im]] (+ (* re re) (* im im)))
 
 (defn magnitude [[re im]] (Math/sqrt (add-squares [re im])))
