@@ -17,19 +17,17 @@
            ))
 
 (defn zir-receiver []
-  (let [audio-format (zir-synth/audio-format)
-        sdl (AudioSystem/getSourceDataLine audio-format)
-        velocities (into (sorted-map) (map (fn [i] [i (atom (int 0))]) (range 0 127)))]
-    (defn- calc-data [t note velocity]
-      (let [frequency-Hz (note/frequency note)
-            volume (* velocity 0.2)]                        ;TODO
-        (osc/wave-bytes (osc/square t frequency-Hz) volume))
-      )
+  (let [velocities (into (sorted-map) (map (fn [i] [i (atom (int 0))]) (range 0 127)))
+        audio-format (zir-synth/audio-format)
+        sdl (AudioSystem/getSourceDataLine audio-format)]
     (defn- synth-loop [t]
-      (doseq [active (filter (fn [[k v]] (> @v 0)) velocities)]
-        (let [data (calc-data t (key active) @(val active))
-              bytes (byte-array (concat [data] [data]))]
-          (.write ^SourceDataLine sdl bytes 0 2)))
+      (let [active (filter (fn [[k v]] (> @v 0)) velocities)
+            wave-form :sine
+            waves (map (fn [pair] (osc/calculate wave-form t (key pair))) active)
+            wave (reduce + waves)
+            wave-bytes (osc/wave-bytes wave 64.0)]
+        (.write ^SourceDataLine sdl wave-bytes 0 2)
+        )
       (recur (+ t 1)))
     (defn start-up []
       (println "Starting receiver...")
