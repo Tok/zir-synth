@@ -12,14 +12,9 @@
            (javax.sound.midi Sequencer)
            (javax.sound.midi Synthesizer)
            (javax.sound.midi ShortMessage)
-           (javax.sound.sampled AudioFormat)
            (javax.sound.sampled AudioSystem)
            (javax.sound.sampled SourceDataLine)
            ))
-
-(defn audio-format []
-  (let [sample-size-in-bits 8 channels 2 signed true big-endian false]
-    (AudioFormat. zir-synth/sample-rate-Hz sample-size-in-bits channels signed big-endian)))
 
 (defn note-off [velocities timestamp note]
   (println timestamp "OFF" note (note/note-name note))
@@ -32,7 +27,7 @@
     (reset! (get velocities note) velocity)))
 
 (defn zir-receiver []
-  (let [audio-format (audio-format)
+  (let [audio-format (zir-synth/audio-format)
         sdl (AudioSystem/getSourceDataLine audio-format)
         velocities (into (sorted-map) (map (fn [i] [i (atom (int 0))]) (range 0 127)))]
     (defn- synth-loop [t]
@@ -67,27 +62,29 @@
         (.stop sdl)
         (.close sdl)))))
 
-(defn midi-port? [device] (and (not (instance? Sequencer device)) (not (instance? Synthesizer device))))
-(defn in-port? [midi-port] (s/includes? (type (.getDeviceInfo midi-port)) "MidiInDevice"))
+(defn- midi-port? [device] (and (not (instance? Sequencer device)) (not (instance? Synthesizer device))))
+(defn- in-port? [midi-port] (s/includes? (type (.getDeviceInfo midi-port)) "MidiInDevice"))
+
+(defn- infos [] (MidiSystem/getMidiDeviceInfo))
+(defn- devices [] (map #(MidiSystem/getMidiDevice %) (infos)))
+(defn- midi-ports [] (filter midi-port? (devices)))
+(defn- find-in-port [] (first (filter in-port? (midi-ports))))
 
 (defn -main
   "Opens the first active MIDI input device and connects it with a new receiver."
   [& args]
-  (let [infos (MidiSystem/getMidiDeviceInfo)
-        devices (map #(MidiSystem/getMidiDevice %) infos)
-        midi-ports (filter midi-port? devices)
-        in-port (first (filter in-port? midi-ports))
-        synth-transmitter (.getTransmitter ^MidiDevice in-port)
-        zir-transmitter (.getTransmitter ^MidiDevice in-port)
+  (let [port (find-in-port)
+        synth-transmitter (.getTransmitter ^MidiDevice port)
+        zir-transmitter (.getTransmitter ^MidiDevice port)
         synth (MidiSystem/getSynthesizer)
         rec (zir-receiver)]
     (.setReceiver synth-transmitter (.getReceiver synth))
     (.setReceiver zir-transmitter rec)
     (start-up)
-    (println "Trying to open device" (.toString (.getDeviceInfo in-port)))
+    (println "Trying to open device" (.toString (.getDeviceInfo port)))
     (try
       (.open synth)
-      (.open in-port)
+      (.open port)
       (println "Listening..")
       (catch MidiUnavailableException e (str "Device not available" (.getMessage e)))
       )))
