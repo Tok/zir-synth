@@ -5,21 +5,20 @@
             [zir-synth.midi.note :as note]
             ))
 
-(defn angle [tick note]
+(defn calc-amplitude [tick type note velocity]
   (let [frequency-Hz (note/frequency note)
-        tpc (zir-synth/ticks-per-cycle frequency-Hz)
-        cycle (/ tick tpc)]
-    (mod (* cycle zir-math/tau) zir-math/tau)))
+        peak-amplitude (/ velocity 127)
+        raw-phase (/ (* tick frequency-Hz zir-math/tau) zir-synth/sample-rate-Hz)
+        phase (mod raw-phase zir-math/tau)]
+    (cond
+      (= type :sine) (* peak-amplitude (Math/sin phase))
+      (= type :square) (* peak-amplitude (if (> 0 (Math/sin phase)) 1.0 0.0))
+      ))
+  )
 
-(defn calculate-wave [type angle]
-  (cond
-    (= type :sine) (Math/sin angle)
-    (= type :square) (if (> 0 (Math/sin angle)) 1.0 0.0)
-    ))
-
-(defn wave-bytes [wave amplitude]
-  (let [global-volume 0.4
+(defn wave-bytes [wave]
+  (let [global-volume 1.0
         data (if wave
-               (byte (* wave (* amplitude global-volume)))
+               (byte (* wave global-volume))
                (byte 0))]
     (byte-array (concat [data] [data]))))
