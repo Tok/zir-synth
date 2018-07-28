@@ -1,7 +1,8 @@
 (ns zir-synth.listener
   (:gen-class)
   (:require [clojure.string :as s]
-            [zir-synth.receiver.stream.approx :as approx])
+            [zir-synth.receiver.stream.approx :as approx]
+            [zir-synth.receiver.single :as single])
   (:import (javax.sound.midi MidiDevice)
            (javax.sound.midi MidiSystem)
            (javax.sound.midi MidiUnavailableException)
@@ -24,11 +25,15 @@
         synth-transmitter (.getTransmitter ^MidiDevice port)
         zir-transmitter (.getTransmitter ^MidiDevice port)
         synth (MidiSystem/getSynthesizer)
-        default-rec (.getReceiver synth)
-        approx-rec (approx/receiver)]
-    (.setReceiver synth-transmitter default-rec)
-    (.setReceiver zir-transmitter approx-rec)
-    (approx/start-up)
+        default-rec (.getReceiver synth)]
+    ;default piano notes:
+    ;(.setReceiver synth-transmitter default-rec)
+
+    ;(.setReceiver zir-transmitter (approx/receiver))
+    ;(approx/start-up)
+
+    (.setReceiver (.getTransmitter ^MidiDevice port) (single/receiver))
+
     (println "Trying to open device" (.toString (.getDeviceInfo port)))
     (try
       (.open synth)

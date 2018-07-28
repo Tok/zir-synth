@@ -6,8 +6,7 @@
             [zir-synth.util.math :as zir-math]
             [zir-synth.midi.note :as note]
             [clojure.tools.logging :as log])
-  (:import (java.lang System)
-           (javax.sound.midi Receiver)
+  (:import (javax.sound.midi Receiver)
            (javax.sound.midi ShortMessage)
            (javax.sound.sampled AudioSystem)
            (javax.sound.sampled SourceDataLine)
