@@ -19,8 +19,7 @@
   (.noteOn ^SoftChannelProxy chan note-number note-velocity)
   (future
     (<!! (timeout duration-ms))
-    (.noteOff ^SoftChannelProxy chan note-number)
-    ))
+    (.noteOff ^SoftChannelProxy chan note-number)))
 
 (defn- play-seq! [midi-seq]
   (log/info "Playing sequence:" midi-seq)
@@ -36,20 +35,16 @@
     (doseq [notes midi-seq]
       (println notes)
       (doseq [n notes]
-        (play-note! chan (note/midi-note octave n) piano-volume duration-ms)
-        )
-      (buzz/play! notes buzz-volume duration-ms)
-      )))
+        (play-note! chan (note/midi-note octave n) piano-volume duration-ms))
+      (buzz/play! notes buzz-volume duration-ms))))
 
 (defn- send-notes [receiver chan-id i midi-note-vec]
   (doseq [midi-note midi-note-vec]
     (let [volume 100
           on-msg (ShortMessage. (ShortMessage/NOTE_ON) chan-id midi-note volume)
-          off-msg (ShortMessage. (ShortMessage/NOTE_OFF) chan-id midi-note volume)
-          ]
-        (.send receiver on-msg i)
-        (.send receiver off-msg (+ i 4))
-      )))
+          off-msg (ShortMessage. (ShortMessage/NOTE_OFF) chan-id midi-note volume)]
+      (.send receiver on-msg i)
+      (.send receiver off-msg (+ i 4)))))
 
 (defn- queue-notes [track chan-id i midi-note-vec]
   (doseq [midi-note midi-note-vec]
@@ -58,8 +53,7 @@
           off-msg (ShortMessage. (ShortMessage/NOTE_OFF) chan-id midi-note volume)]
       ;(synth-chan)
       (.add track (MidiEvent. on-msg i))
-      (.add track (MidiEvent. off-msg (+ i 4)))
-      )))
+      (.add track (MidiEvent. off-msg (+ i 4))))))
 
 (defn- init [sequencer synth]
   (let [transmitter (.getTransmitter sequencer)
@@ -69,8 +63,7 @@
     (.loadAllInstruments synth soundbank)
     (log/info "Connecting synth..")
     (.setReceiver transmitter receiver)
-    receiver
-    ))
+    receiver))
 
 (defn- play-sequence [sq bpm]
   (let [sequencer (MidiSystem/getSequencer)
@@ -102,8 +95,7 @@
     ;(.setLoopCount sequencer Sequencer/LOOP_CONTINUOUSLY)
     (.setLoopCount sequencer 1)
     (log/info "Starting..")
-    (.start sequencer)
-    ))
+    (.start sequencer)))
 
 (defn -main "Zir Synth" [& args]
   (let [scale (major/c-major)
@@ -123,5 +115,4 @@
       ;(.stop sequencer)
       ;(.close sequencer)
       (log/info "Shutting down...")
-      (System/exit 0)
-      )))
+      (System/exit 0))))

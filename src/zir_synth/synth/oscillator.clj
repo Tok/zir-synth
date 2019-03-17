@@ -2,8 +2,7 @@
   (:gen-class)
   (:require [zir-synth.util.synth :as zir-synth]
             [zir-synth.util.math :as zir-math]
-            [zir-synth.midi.note :as note]
-            ))
+            [zir-synth.midi.note :as note]))
 
 (defn calc-amplitude [tick type note velocity]
   (let [frequency-Hz (note/frequency note)
@@ -12,9 +11,7 @@
         phase (mod raw-phase zir-math/tau)]
     (cond
       (= type :sine) (* peak-amplitude (Math/sin phase))
-      (= type :square) (* peak-amplitude (if (> 0 (Math/sin phase)) 1.0 0.0))
-      ))
-  )
+      (= type :square) (* peak-amplitude (if (> 0 (Math/sin phase)) 1.0 0.0)))))
 
 (defn wave-bytes [wave]
   (let [global-volume 1.0

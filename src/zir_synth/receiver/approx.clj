@@ -1,4 +1,4 @@
-(ns zir-synth.receiver.stream.approx
+(ns zir-synth.receiver.approx
   (:gen-class)
   (:require [clojure.core.async :refer [go go-loop <! timeout]]
             [zir-synth.synth.oscillator :as osc]
@@ -9,8 +9,7 @@
   (:import (javax.sound.midi Receiver)
            (javax.sound.midi ShortMessage)
            (javax.sound.sampled AudioSystem)
-           (javax.sound.sampled SourceDataLine)
-           ))
+           (javax.sound.sampled SourceDataLine)))
 
 (defn receiver []
   (let [use-timeout? true
@@ -33,13 +32,9 @@
               (if use-timeout? (<! (timeout (/ 1 zir-synth/sample-rate-Hz))))
               (if use-rep?
                   (repeat (- tick last-tick) (.write ^SourceDataLine sdl (osc/wave-bytes angle) 0 2))
-                  (.write ^SourceDataLine sdl (osc/wave-bytes angle) 0 2)
-                  )
-              )
-            (do (.drain sdl) (.stop sdl))
-            )
-          (recur (inc i) tick))
-        ))
+                  (.write ^SourceDataLine sdl (osc/wave-bytes angle) 0 2)))
+            (do (.drain sdl) (.stop sdl)))
+          (recur (inc i) tick))))
     (defn note-off [timestamp note]
       (println timestamp "OFF" note (note/note-name note))
       (reset! (get velocities note) 0))
@@ -47,8 +42,7 @@
       (println timestamp "ON" note velocity (note/note-name note))
       (if (= velocity 0)
         (note-off timestamp note)
-        (reset! (get velocities note) velocity)))
-    )
+        (reset! (get velocities note) velocity))))
   (reify Receiver
     (send [_ message timestamp]
       (let [command (int (.getCommand message))
@@ -60,8 +54,7 @@
               (= command ShortMessage/NOTE_ON) (note-on timestamp note velocity)
               (= command ShortMessage/NOTE_OFF) (note-off timestamp note)))
           (log/warn "Unhandled command" command))))
-    (close [this] (println "Closing..."))
-    ))
+    (close [this] (println "Closing..."))))
 
 (defn start-up []
   (let [audio-format (zir-synth/audio-format)

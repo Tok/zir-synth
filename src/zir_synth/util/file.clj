@@ -10,5 +10,4 @@
         sequence (MidiSystem/getSequence midi-resource)]
     (.open sequencer)
     (.setSequence sequencer sequence)
-    (.start sequencer)
-    ))
+    (.start sequencer)))

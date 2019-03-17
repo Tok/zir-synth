@@ -1,14 +1,12 @@
 (ns zir-synth.listener
   (:gen-class)
   (:require [clojure.string :as s]
-            [zir-synth.receiver.stream.approx :as approx]
-            [zir-synth.receiver.single :as single])
+            [zir-synth.receiver.approx :as approx])
   (:import (javax.sound.midi MidiDevice)
            (javax.sound.midi MidiSystem)
            (javax.sound.midi MidiUnavailableException)
            (javax.sound.midi Sequencer)
-           (javax.sound.midi Synthesizer)
-           ))
+           (javax.sound.midi Synthesizer)))
 
 (defn- midi-port? [device] (and (not (instance? Sequencer device)) (not (instance? Synthesizer device))))
 (defn- in-port? [midi-port] (s/includes? (type (.getDeviceInfo midi-port)) "MidiInDevice"))
@@ -22,22 +20,16 @@
   "Opens the first active MIDI input device and connects it with receivers."
   [& args]
   (let [port (find-in-port)
-        synth-transmitter (.getTransmitter ^MidiDevice port)
-        zir-transmitter (.getTransmitter ^MidiDevice port)
-        synth (MidiSystem/getSynthesizer)
-        default-rec (.getReceiver synth)]
-    ;default piano notes:
-    ;(.setReceiver synth-transmitter default-rec)
+        transmitter (.getTransmitter ^MidiDevice port)
+        synth (MidiSystem/getSynthesizer)]
+    (.setReceiver transmitter (.getReceiver synth))         ;default piano notes
 
-    ;(.setReceiver zir-transmitter (approx/receiver))
+    ;(.setReceiver transmitter (approx/receiver))
     ;(approx/start-up)
-
-    (.setReceiver (.getTransmitter ^MidiDevice port) (single/receiver))
 
     (println "Trying to open device" (.toString (.getDeviceInfo port)))
     (try
       (.open synth)
       (.open port)
       (println "Listening..")
-      (catch MidiUnavailableException e (str "Device not available" (.getMessage e)))
-      )))
+      (catch MidiUnavailableException e (str "Device not available" (.getMessage e))))))

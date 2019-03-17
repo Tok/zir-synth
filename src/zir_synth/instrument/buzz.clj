@@ -22,8 +22,7 @@
       (dotimes [i (calc-times sample-rate-Hz duration-ms)]
         (let [an (calc-angle sample-rate-Hz buzz-hz i)
               by (sound-byte an volume)]
-          (write! sdl by an volume)))
-      )
+          (write! sdl by an volume))))
     (.drain sdl)
     (.stop sdl)
     (.close sdl)))
