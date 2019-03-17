@@ -1,18 +1,19 @@
 (ns zir-synth.midi.scale.scale-test
   (:require [clojure.test :refer :all]
+            [zir-synth.test-util :refer :all]
             [zir-synth.midi.scale.major :as major]
             [zir-synth.midi.scale.minor :as minor]
             [zir-synth.midi.scale.scale :refer :all]))
 
 (deftest major-triad-test
-  (testing "c-major triad" (is (= (triad (major/scale :C)) [:C :E :G])))
-  (testing "f-major triad" (is (= (triad (major/scale :F)) [:F :A :C])))
-  (testing "g-major triad" (is (= (triad (major/scale :G)) [:G :B :D]))))
+  (test= "c-major triad" (triad (major/scale :C)) [:C :E :G])
+  (test= "f-major triad" (triad (major/scale :F)) [:F :A :C])
+  (test= "g-major triad" (triad (major/scale :G)) [:G :B :D]))
 
 (deftest minor-triad-test
-  (testing "d-minor triad" (is (= (triad (minor/scale :D)) [:D :F :A])))
-  (testing "e-minor triad" (is (= (triad (minor/scale :E)) [:E :G :B])))
-  (testing "a-minor triad" (is (= (triad (minor/scale :A)) [:A :C :E]))))
+  (test= "d-minor triad" (triad (minor/scale :D)) [:D :F :A])
+  (test= "e-minor triad" (triad (minor/scale :E)) [:E :G :B])
+  (test= "a-minor triad" (triad (minor/scale :A)) [:A :C :E]))
 
 ;https://en.wikipedia.org/wiki/Relative_key
 (deftest relative-keys-test
@@ -30,4 +31,4 @@
         [(major/e-flat-major) (minor/c-minor)]
         [(major/b-flat-major) (minor/g-minor)]
         [(major/f-major) (minor/d-minor)]]]
-    (testing (is (scales-shifted? (first v) (second v))))))
+    (do-test (scales-shifted? (first v) (second v)))))

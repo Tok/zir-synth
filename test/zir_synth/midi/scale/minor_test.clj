@@ -1,5 +1,6 @@
 (ns zir-synth.midi.scale.minor-test
   (:require [clojure.test :refer :all]
+            [zir-synth.test-util :refer :all]
             [zir-synth.midi.scale.minor :refer :all]
             [zir-synth.midi.scale.scale :refer :all]))
 
@@ -10,7 +11,7 @@
         [(d-sharp-minor) (e-flat-minor)]
         [(f-sharp-minor) (g-flat-minor)]
         [(g-sharp-minor) (a-flat-minor)]]]
-    (testing (is (scales-equal? (first v) (second v))))))
+    (do-test (scales-equal? (first v) (second v)))))
 
 (deftest minor-key-note-test
   (doseq
@@ -21,4 +22,4 @@
         [(scale :E) (e-minor)]
         [(scale :F) (f-minor)] [(scale :F#) (f-sharp-minor)] [(scale :Gb) (g-flat-minor)]
         [(scale :G) (g-minor)] [(scale :G#) (g-sharp-minor)] [(scale :Ab) (a-flat-minor)]]]
-    (testing (is (scales-equal? (first v) (second v))))))
+    (do-test (scales-equal? (first v) (second v)))))

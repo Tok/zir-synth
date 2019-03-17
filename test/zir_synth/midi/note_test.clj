@@ -1,56 +1,57 @@
 (ns zir-synth.midi.note-test
   (:require [clojure.test :refer :all]
             [clojure.algo.generic.math-functions :refer :all]
+            [zir-synth.test-util :refer :all]
             [zir-synth.midi.note :refer :all]
             [zir-synth.midi.scale.minor :as minor]
             [zir-synth.midi.scale.major :as major]))
 
 (deftest octave-test
-  (testing "normal" (is (= (octave 60) 0)))
-  (testing "min" (is (= (octave 0) -5)))
-  (testing "max" (is (= (octave 127) 5))))
+  (test= (octave 60) 0)
+  (test= "min" (octave 0) -5)
+  (test= "max" (octave 127) 5))
 
 (deftest name-test
-  (testing (is (= (note-name 33) :A)))
-  (testing (is (= (note-name 77) :F)))
-  (testing (is (= (note-name 100) :E)))
-  (testing (is (= (note-name 111) :D#/Eb)))
-  (testing "min" (is (= (note-name 0) :C)))
-  (testing "max" (is (= (note-name 127) :G))))
+  (test= (note-name 33) :A)
+  (test= (note-name 77) :F)
+  (test= (note-name 100) :E)
+  (test= (note-name 111) :D#/Eb)
+  (test= "min" (note-name 0) :C)
+  (test= "max" (note-name 127) :G))
 
 (deftest offset-test
-  (testing (is (= (offset :C) 0)))
-  (testing "min" (is (= (offset :B) 11)))
-  (testing "max" (is (= (offset :D#/Eb) 3))))
+  (test= (offset :C) 0)
+  (test= "min" (offset :B) 11)
+  (test= "max" (offset :D#/Eb) 3))
 
 (deftest notes-from-name-test
-  (testing (is (= (notes-from-name :C) [0 12 24 36 48 60 72 84 96 108 120])))
-  (testing (is (= (notes-from-name :G) [7 19 31 43 55 67 79 91 103 115 127])))
-  (testing (is (= (notes-from-name :B) [11 23 35 47 59 71 83 95 107 119])))
-  (testing (is (= (notes-from-name :G#/Ab) [8 20 32 44 56 68 80 92 104 116]))))
+  (test= (notes-from-name :C) [0 12 24 36 48 60 72 84 96 108 120])
+  (test= (notes-from-name :G) [7 19 31 43 55 67 79 91 103 115 127])
+  (test= (notes-from-name :B) [11 23 35 47 59 71 83 95 107 119])
+  (test= (notes-from-name :G#/Ab) [8 20 32 44 56 68 80 92 104 116]))
 
 (deftest to-names-test
-  (testing "c-major" (is (= (to-names [60 62 64 65 67 69 71]) [:C :D :E :F :G :A :B])))
-  (testing "a-minor" (is (= (to-names [69 71 72 74 76 77 79]) [:A :B :C :D :E :F :G]))))
+  (test= "c-major" (to-names [60 62 64 65 67 69 71]) [:C :D :E :F :G :A :B])
+  (test= "a-minor" (to-names [69 71 72 74 76 77 79]) [:A :B :C :D :E :F :G]))
 
 (deftest key-equality-test
   (doseq [v [[:C## :D] [:D## :E] [:E# :F] [:F## :G] [:G## :A] [:A## :B] [:B# :C]
              [:Cb :B] [:Dbb :C] [:Ebb :D] [:Fb :E] [:Gbb :F] [:Abb :G] [:Bbb :A]]]
-    (testing (is (notes-equal? (first v) (second v))))))
+    (do-test (notes-equal? (first v) (second v)))))
 
 (deftest midi-note-test
-  (testing (is (= (midi-note 0 :C) 60)))
-  (testing "min" (is (= (midi-note -5 :C) 0)))
-  (testing "max" (is (= (midi-note 5 :G) 127))))
+  (test= (midi-note 0 :C) 60)
+  (test= "min" (midi-note -5 :C) 0)
+  (test= "max" (midi-note 5 :G) 127))
 
 (deftest midi-progression-test
-  (testing "c-major" (is (= (midi-progression 0 (major/scale :C)) [60 62 64 65 67 69 71 72])))
-  (testing "a-minor" (is (= (midi-progression 0 (minor/scale :A)) [69 71 72 74 76 77 79 81])))
-  (testing "min" (is (= (midi-progression -5 (major/scale :C)) [0 2 4 5 7 9 11 12])))
-  (testing "max" (is (= (midi-progression +4 (minor/scale :G)) [115 117 118 120 122 123 125 127]))))
+  (test= "c-major" (midi-progression 0 (major/scale :C)) [60 62 64 65 67 69 71 72])
+  (test= "a-minor" (midi-progression 0 (minor/scale :A)) [69 71 72 74 76 77 79 81])
+  (test= "min" (midi-progression -5 (major/scale :C)) [0 2 4 5 7 9 11 12])
+  (test= "max" (midi-progression +4 (minor/scale :G)) [115 117 118 120 122 123 125 127]))
 
 (deftest standard-test
-  (testing "A440 pitch standard" (is (= (frequency (midi-note 0 :A)) 440))))
+  (test= "A440 pitch standard" (frequency (midi-note 0 :A)) 440))
 
 (defn- frequency-OK? [midi-note compare]
   (let [epsilon 1e-10] (approx= (frequency midi-note) compare epsilon)))
@@ -89,4 +90,4 @@
         [116 6644.8751612791] [117 7040.0000000000] [118 7458.6201842894] [119 7902.1328200980]
         [120 8372.0180896192] [121 8869.8441912599] [122 9397.2725733570] [123 9956.0634791066]
         [124 10548.0818212118] [125 11175.3034058561] [126 11839.8215267723] [127 12543.8539514160]]]
-    (testing (is (frequency-OK? (first v) (second v))))))
+    (do-test (frequency-OK? (first v) (second v)))))

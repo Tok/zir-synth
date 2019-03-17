@@ -8,6 +8,7 @@
   (:require [clojure.core.async :refer [<!! timeout]]
             [clojure.tools.logging :as log]
             [zir-synth.instrument.buzz :as buzz]
+            [zir-synth.util.file :as file-util]
             [zir-synth.util.math :as math-util]
             [zir-synth.midi.note :as note]
             [zir-synth.midi.chord :as chord]
@@ -78,9 +79,7 @@
     (log/info "Obtaining channels..")
     (def synth-chan (nth (.getChannels synth) synth-chan-id))
     (log/info "Preparing track..")
-    (.add track (MidiEvent.
-                  (ShortMessage.
-                    (ShortMessage/PROGRAM_CHANGE) synth-chan-id 1 0) -1))
+    (.add track (MidiEvent. (ShortMessage. (ShortMessage/PROGRAM_CHANGE) synth-chan-id 1 0) -1))
     (log/info "Opening Sequencer..")
     (.open sequencer)
     (log/info "Setting tempo to" bpm "BPM.")
@@ -103,16 +102,15 @@
         bpm 180.0
         steps (count melody)
         duration-s (* (math-util/to-bps bpm) steps)]
-    (play-sequence melody bpm)
 
-    ;(play-seq! melody)
+    ;(play-sequence melody bpm)
 
-    ;(file/play-midi-resource "wikipedia/Drum_sample.mid")
-    ;(play-times! 16)
+    (play-seq! melody)
+
+    ;(file-util/play-midi-resource "wikipedia/Drum_sample.mid")
+
     (future
-      (<!! (timeout (* duration-s 1000)))
+      (<!! (timeout duration-s))
       (shutdown-agents)
-      ;(.stop sequencer)
-      ;(.close sequencer)
       (log/info "Shutting down...")
       (System/exit 0))))
